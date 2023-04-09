@@ -2,10 +2,10 @@ from typing import List
 
 
 class CommandDescription:
-    def __init__(self, name: str, doc: str, shortcuts: List[str], func: callable):
+    def __init__(self, name: str, func: callable, doc: str = None, shortcuts: List[str] = None):
         self.name = name
-        self.doc = doc
-        self.shortcuts = shortcuts
+        self.doc = (doc or "").strip()
+        self.shortcuts = shortcuts or []
         self.func = func
 
     @classmethod
@@ -13,7 +13,35 @@ class CommandDescription:
         name = func.__name__[len(suffix):] if func.__name__.endswith(suffix) else func.__name__
         doc = func.__doc__
         shortcuts = func.shortcuts if hasattr(func, "shortcuts") else []
-        return cls(name, doc, shortcuts, func)
+        return cls(name=name, func=func, doc=doc, shortcuts=shortcuts)
+
+
+def command(shortcuts=None):
+    def command_decorator(func):
+        func.is_command = True
+        func.shortcuts = shortcuts
+        return func
+
+    return command_decorator
+
+
+def register_commands(suffix='__command'):
+    """Class decorator, that register all commands in the class
+    method is considered a command if it ends with suffix (default: __command)
+    or has attribute is_command (added by @command() decorator)
+    """
+
+    def register_commands_decorator(cls):
+        cls.commands = {}
+        for name in cls.__dict__:
+            func = getattr(cls, name)
+            if (not hasattr(func, 'is_command') and name.endswith(suffix)) or (
+                    hasattr(func, 'is_command') and func.is_command):
+                key = name[:len(suffix)] if name.endswith(suffix) else name
+                cls.commands[key] = name
+        return cls
+
+    return register_commands_decorator
 
 
 if __name__ == '__main__':
@@ -24,6 +52,7 @@ if __name__ == '__main__':
     shortcuts = ["dummy_shortcut"]
     func = lambda: "dummy func"
     command2 = CommandDescription(name, doc, shortcuts, func)
+
 
     # option 2: from a func, using a decorator
     def dummy__command():

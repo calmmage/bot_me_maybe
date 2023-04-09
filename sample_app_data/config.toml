@@ -1,0 +1,18 @@
+[main]
+
+# Per-plugin configuration
+[[plugins]]
+name = "users"
+enabled = true
+
+[[plugins]]
+name = "commands"
+enabled = true
+
+[[plugins]]
+name = "storage"
+enabled = true
+
+[[plugins]]
+name = "event_logging"
+enabled = true

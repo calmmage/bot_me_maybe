@@ -1,0 +1,1 @@
+from bot_me_maybe import TelegramBot

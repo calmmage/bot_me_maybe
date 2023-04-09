@@ -8,7 +8,7 @@ class Chatbot:
         self.user_interface = user_interface
         # register commands from
         commands = engine.get_commands()
-        for command in commands:
+        for command in commands.values():
             user_interface.register_command_handler(command)
 
         # register message handler
