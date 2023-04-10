@@ -6,18 +6,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bmmb"
 description = "BotMeMaybe - a collection of utils for easy bot development"
-version = "0.1.0"
+#version = "0.1.0"
 requires-python = ">=3.7"
-readme = "README.md"
+#readme = "README.md"
 #license = {text = "LICENSE"}
 license = { file = "LICENSE", encoding = "utf-8" }
+dynamic = ["version", "readme"]
 
 dependencies = [
     "mongoengine",
+    "python-telegram-bot", # todo: clarify version - latest
+    "aiogram", # todo: clarify version - latest
 ]
-#[dependencies]
-#mongoengine = "*"
-
 authors = [
     { name = "Petr Lavrov", email = "petr.b.lavrov@gmail.com" },
 ]
@@ -26,6 +26,15 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 
+
+[project.optional-dependencies]
+pyrogram = ["pyrogram"]
+full = ["pyrogram", "injector"]
+
+
+[tool.setuptools.dynamic]
+version = { attr = "bmmb.__version__" }
+readme = { file = ["README.md"] }
 # todo: try poetry
 #[tool.poetry]
 #name = "bmmb"
