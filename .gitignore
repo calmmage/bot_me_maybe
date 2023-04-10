@@ -4,7 +4,7 @@
 
 .idea
 dev
-*config*.toml
+config*.toml
 *secret*.toml
 
 # ----------------------------------------
