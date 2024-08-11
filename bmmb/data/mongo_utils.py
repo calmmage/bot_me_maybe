@@ -4,6 +4,8 @@ from typing import Type
 import mongoengine
 from pymongo.collection import Collection
 from pymongo.database import Database
+from mongoengine import EmbeddedDocument, Document
+from bmmb.logging_utils import get_logger
 
 
 def get_conn_str():
@@ -21,7 +23,7 @@ def connect_mongo(alias):
     return mongoengine.connect(db=alias, alias=alias, host=conn_str)
 
 
-class MongoItem(mongoengine.Document):
+class MongoItem(Document):
 
     def __repr__(self):
         fields = {}
@@ -35,14 +37,39 @@ class MongoItem(mongoengine.Document):
     def __str__(self):
         return self.__repr__()
 
-    def __iter__(self):
-        return iter(self.objects)
-
     meta = {"abstract": True, "strict": False, "allow_inheritance": True}
 
 
+class MongoSubItem(EmbeddedDocument):
+    def __repr__(self):
+        fields = {}
+        for field in self._fields_ordered:
+            if field in ['id', '_id', '_cls']:
+                continue
+            fields[field] = getattr(self, field)
+        field_values = ', '.join(f"{key}: {val}" for key, val in fields.items())
+        return f"<{self.__class__.__name__}({field_values})>"
+
+    def __str__(self):
+        return self.__repr__()
+
+    meta = {"abstract": True, "strict": False, "allow_inheritance": True}
+
+users = db.get_table('users', User)
+
+users = {} # str(id) -> User
+
+class MyBot:
+    def __init__(self):
+        self.users = {}
+        # self.users = db.get_table('users', User)
+
+    def add_user(self, id, **kwargs):
+        self.users[id] = kwargs
+
 class MongoTable:
-    def __init__(self, table_name, item_type, db_alias=None):
+    def __init__(self, table_name: str, item_type: Type[MongoItem],
+                 db_alias=None):
         self.table_name = table_name
         self.item_type = item_type
         if db_alias is not None:
@@ -98,16 +125,20 @@ class MongoTable:
 
     def __repr__(self):
         total_items_count = self.item_type.objects.count()
-
         items = self.item_type.objects.order_by('id')
-        head_items = items.limit(self.PREVIEW_HEAD)
+        if total_items_count <= self.PREVIEW_HEAD + self.PREVIEW_TAIL:
+            preview_strings = [f"  {repr(item)}" for item in items]
+        else:
+            # items = items.limit(self.PREVIEW_HEAD + self.PREVIEW_TAIL)
+            head_items = items.limit(self.PREVIEW_HEAD)
 
-        reverse_items = self.item_type.objects.order_by('-id')
-        tail_items = reverse_items.limit(self.PREVIEW_TAIL)
+            reverse_items = self.item_type.objects.order_by('-id')
+            tail_items = reverse_items.limit(self.PREVIEW_TAIL)
 
-        preview_strings = ([f"  {repr(item)}" for item in head_items] +
-                           ['  ...'] +
-                           [f"  {repr(item)}" for item in reversed(tail_items)])
+            preview_strings = ([f"  {repr(item)}" for item in head_items] +
+                               ['  ...'] +
+                               [f"  {repr(item)}" for item in
+                                reversed(tail_items)])
         preview_output = '\n'.join(preview_strings)
         return f"<{self.__class__.__name__} for '{self.table_name}': {total_items_count} items>\n{preview_output}"
 
@@ -125,6 +156,9 @@ class MongoTable:
     def __getitem__(self, item):
         return self.item_type[item]
 
+    def __iter__(self):
+        return iter(self.item_type.objects)
+
 
 # import mongoengine
 # from dotenv import load_dotenv
@@ -138,6 +172,7 @@ class MongoDatabase:
     def __init__(self, db_name, db_alias='default', conn_str=None):
         self.db_name = db_name
         self.db_alias = db_alias
+        self._logger = None
         # if already connected - reuse
         try:
             self.db: Database = mongoengine.connection.get_db(db_alias)
@@ -233,3 +268,25 @@ class MongoDatabase:
 
     def __getattr__(self, key):
         return getattr(self.db, key)
+
+    @property
+    def logger(self):
+        if self._logger is None:
+            self._logger = self.get_logger()
+        return self._logger
+
+    def get_logger(
+            self,
+            to_stdout=True,
+            to_file=True, file_path='log.txt', rotation='1 Day',
+            serialize=False,
+            collection='logs', **kwargs
+    ):
+        return get_logger(
+            to_stdout=to_stdout,
+            to_file=to_file, file_path=file_path, rotation=rotation,
+            serialize=serialize,
+            to_mongo=True, client=self.db.client, name=self.name,
+            collection=collection,
+            **kwargs
+        )

@@ -1,0 +1,10 @@
+
+[database]
+type = "local"
+#type = "mongo"
+
+[database.connection_data]
+data_path = "local_db"
+#connection_string = "mongodb://localhost:27017"
+#connection_string = "mongodb+srv://petrlavrov:f8ssZM6H4Cvux4Uq@petrlavrovserverless.prced.mongodb.net/?retryWrites=true&w=majority"
+#db_name = "bmmb_sample_db"
